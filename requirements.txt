@@ -1,0 +1,12 @@
+numpy
+scipy
+torch
+torchvision
+torchaudio
+open3d
+opencv-python
+pillow
+pyyaml
+openai
+transformers
+segment-anything

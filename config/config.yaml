@@ -1,0 +1,23 @@
+data:
+  dataset_name: "PartNetE"
+  base_path: "./data/PartNetE"
+
+render:
+  camera_distance: 2.0
+  resolution: [800, 800]
+  num_cameras: 20
+
+model:
+  glip_weight_path: "/data/xhhuang/project/PartSTAD/models/glip_large_model.pth"
+  sam_weight_path: "/data/xhhuang/project/PartSTAD/segment-anything/models/sam_vit_h_4b8939.pth"
+  sam_model_type: "vit_h"
+
+algorithm:
+  iou_threshold: 0.3
+  min_cluster_points: 50
+
+mllm:
+  provider: "openai"
+  model_name: "gpt-4o"
+  api_key_env: "OPENAI_API_KEY"
+  base_url: "https://api.openai.com/v1" # 可以替换为类似 https://yibuapi.com/v1 等中转地址
