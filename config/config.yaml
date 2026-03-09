@@ -5,7 +5,7 @@ data:
 render:
   camera_distance: 2.0
   resolution: [800, 800]
-  num_cameras: 20
+  num_cameras: 15
 
 model:
   glip_weight_path: "/data/xhhuang/project/PartSTAD/models/glip_large_model.pth"
@@ -18,6 +18,6 @@ algorithm:
 
 mllm:
   provider: "openai"
-  model_name: "gpt-4o"
-  api_key_env: "OPENAI_API_KEY"
-  base_url: "https://api.openai.com/v1" # 可以替换为类似 https://yibuapi.com/v1 等中转地址
+  model_name: "gemini-3-flash-preview"
+  api_key_env: "API_KEY"
+  base_url: "https://yibuapi.com/v1"

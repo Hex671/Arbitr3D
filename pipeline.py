@@ -42,7 +42,13 @@ class Arbitr3DPipeline:
         self.view_selector = KeyViewSelector(target_views=4)
         self.som_renderer = SoMRenderer()
         
-        api_key = os.environ.get(self.config['mllm']['api_key_env'], "YOUR_API_KEY")
+        # 兼容两种写法：如果直接配置了 sk- 开头的 key，直接使用；否则从环境变量读
+        api_key_conf = self.config['mllm'].get('api_key_env', "YOUR_API_KEY")
+        if api_key_conf.startswith("sk-"):
+             api_key = api_key_conf
+        else:
+             api_key = os.environ.get(api_key_conf, "YOUR_API_KEY")
+             
         base_url = self.config['mllm'].get('base_url', None)
         self.arbitrator = MLLMArbitrator(api_key=api_key, base_url=base_url, model_name=self.config['mllm']['model_name'])
         
