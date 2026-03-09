@@ -71,6 +71,10 @@ class MLLMArbitrator:
 
     def parse_mllm_json(self, response_text: str) -> Dict[str, str]:
         """鲁棒地提取 JSON 映射表"""
+        if not response_text or response_text.strip() == "":
+            print("Warning: MLLM returned an empty string.")
+            return {}
+            
         try:
             # 提取被 ```json ``` 包裹的内容
             json_str_match = re.search(r'```json\s*(.*?)\s*```', response_text, re.DOTALL)

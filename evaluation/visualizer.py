@@ -7,10 +7,11 @@ class Visualizer3D:
         np.random.seed(42)
         self.colors = np.random.rand(100, 3)
 
-    def visualize_3d_result(self, pcd: o3d.geometry.PointCloud, point_labels: np.ndarray = None):
+    def visualize_3d_result(self, pcd: o3d.geometry.PointCloud, point_labels: np.ndarray = None, save_path: str = "output_result.ply"):
         """
-        渲染最终分割好的彩色 3D 点云
+        渲染最终分割好的彩色 3D 点云，并保存到本地
         """
+        import os
         if point_labels is not None:
             colors = np.zeros((len(point_labels), 3))
             for i, label in enumerate(point_labels):
@@ -20,4 +21,7 @@ class Visualizer3D:
                     colors[i] = [0.7, 0.7, 0.7] # 背景灰色
             pcd.colors = o3d.utility.Vector3dVector(colors)
             
-        o3d.visualization.draw_geometries([pcd])
+        # o3d.visualization.draw_geometries([pcd])
+        
+        o3d.io.write_point_cloud(save_path, pcd)
+        print(f"✅ 可视化结果已保存至: {os.path.abspath(save_path)}")
