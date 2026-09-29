@@ -1,0 +1,12 @@
+name: arbitr3d
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - cmake>=3.18,<4
+  - ninja
+  - boost=1.78
+  - eigen
+  - pip:
+      - -r requirements.txt

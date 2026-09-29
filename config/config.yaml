@@ -1,23 +1,116 @@
 data:
   dataset_name: "PartNetE"
-  base_path: "./data/PartNetE"
+  base_path: "datasets/PartNetE/test"
+  knowledge_base_path: "datasets/PartNetE/few_shot"
+
+# PartObjaverse-Tiny 数据集配置（batch_test_objaverse.py 使用）
+partobjaverse_tiny:
+  base_path: "datasets/PartObjaverse-Tiny/PartObjaverse-Tiny"
+  mesh_subdir: "PartObjaverse-Tiny_mesh"
+  gt_subdir: "PartObjaverse-Tiny_semantic_gt"
+  meta_json: "PartObjaverse-Tiny_semantic.json"  # 相对于项目根目录
+  num_points: 200000  # 网格采样点数，0 = 使用原始顶点
 
 render:
   camera_distance: 2.0
-  resolution: [800, 800]
-  num_cameras: 15
+  resolution: [512, 512]
+  num_cameras: 10 # Changed to 10 to use PartSTAD's specific views
+  point_radius: 0.015  # 渲染时每个点的半径，越大点越粗（减少空洞但细节模糊），越小越精细
+  # 渲染前对源网格中过暗的顶点 albedo 在 HSV V 通道做下限抬升（保留色相），
+  # 避免如灯泡玻璃 / 灯罩内壁等纯黑材质经 Phong 公式 shaded=colors*shade
+  # 后塌成黑洞。设为 0 关闭；典型值 0.4 ~ 0.6。
+  albedo_min_value: 0.55
 
 model:
-  glip_weight_path: "/data/xhhuang/project/PartSTAD/models/glip_large_model.pth"
-  sam_weight_path: "/data/xhhuang/project/PartSTAD/segment-anything/models/sam_vit_h_4b8939.pth"
+  sam_weight_path: "checkpoints/sam_vit_h_4b8939.pth"
   sam_model_type: "vit_h"
 
 algorithm:
-  iou_threshold: 0.3
-  min_cluster_points: 50
+  depth_threshold: 0.05
+  vote_threshold: 0.6
+  knn_threshold: 0.7
+  k_neighbors: 15
+  # Step 1.2 掩码去重叠处理配置
+  enable_mask_processing: true       # 是否启用掩码去重叠处理（消除掩码之间的交集和包含关系）
+  mask_process_min_area: 200         # 处理后保留的最小掩码面积阈值
+  mask_process_containment_thresh: 0.95  # 包含关系判定阈值（0.95 表示小掩码95%被大掩码覆盖时视为包含）
+  mask_max_object_ratio: 0.85            # 单个掩码面积 / 物体渲染像素数 的上限；超过则剔除（0=不限制）
+  mask_erode_pixels: 3                   # 投影前对每个掩码做形态学腐蚀的像素数（去除边界污染，0=不腐蚀）
+
+# GPU 资源管理配置
+gpu:
+  min_free_gb: 7.0   # 自动选卡时，所需最小可用显存（GB），低于此值的卡不选用
 
 mllm:
   provider: "openai"
-  model_name: "gemini-3-flash-preview"
-  api_key_env: "API_KEY"
-  base_url: "https://yibuapi.com/v1"
+  # OpenAI-compatible vision endpoint; override with MLLM_BASE_URL / MLLM_MODEL_NAME.
+  model_name: "your-vision-model"
+  api_key_env: "OPENAI_API_KEY"  # environment variable NAME, never a literal key
+  base_url: "http://localhost:8000/v1"
+
+# 超点（Superpoint）生成参数
+superpoint:
+  reg_strength: 0.03        # Cut-Pursuit 正则化强度，越小超点越细
+  k_nn_adj: 10              # Cut-Pursuit KNN 邻居数，控制空间连通性
+  spatial_weight: 5.0       # 空间坐标权重 μ (参照 SPT ICCV'23)，越大超点空间跨度越小
+  num_points_per_sp: 20     # 备用方案的目标超点大小
+  coverage_ratio_thresh: 0.03  # 掩码覆盖超点的最低比例阈值
+
+# 消融实验开关
+ablation:
+  use_unified_knowledge: true          # 是否使用泛化知识库（关闭后 MLLM 不接收任何泛化先验）
+  use_initial_instance_knowledge: true # 是否使用初级实例知识库（关闭后 MLLM 不接收 3D 几何特征）
+  use_updated_instance_knowledge: true # 是否使用更新实例知识库（关闭后跳过全局拓扑构建和第二轮 MLLM 复审）
+  disable_height_prior: false          # 是否关闭"高度先验"消融（true 时同时禁用：z_height_range 硬过滤、拓扑规则1高度越界、拓扑规则4空间倒置、MLLM prompt 中的 z_height_range/normalized_z/mask_height/h=[..]）
+
+# ============================================================
+# PartVerse RES（指代分割）配置 —— 完全独立段落，不影响现有 PartNetE / PartObjaverse-Tiny 路径
+# ============================================================
+# 注：仅在 eval_partverse_res.py 入口下读取本段；现有 pipeline.py / test.py / batch_test.py 等路径不会读取。
+res:
+  # 数据源（PartVerse 本地路径）
+  partverse_data_root: "datasets/PartVerse"
+  text_captions_json: "text_captions.json"            # 相对于 partverse_data_root
+  glbs_subdir: "normalized_glbs"                      # 整个物体 mesh 所在子目录
+  anno_infos_subdir: "anno_infos"                     # face_id -> part_label 标注子目录
+
+  # 点云采样
+  num_points: 10000
+
+  # Step 2.A: 目标知识重构开关
+  use_target_K_u_reconstruction: true
+
+  # Step 2.B: 干扰部件发现
+  use_distractor_discovery: true
+  num_views_for_distractor: 4
+  distractor_view_azimuths: [0, 90, 180, 270]
+  distractor_view_elevation: 20
+  max_distractors: 8
+
+  # Step 4: 在线拓扑
+  use_online_topology: true
+
+  # Step 5: 第二轮复查
+  enable_second_round: true
+  second_round_target_only: true                      # 只对 target 语义触发复查
+
+  # 评测
+  caption_types: ["brief", "detailed"]                # 同时跑 brief 与 detailed
+  max_queries_per_instance: null                      # null = 全跑
+
+  # 缓存与产出（与现有 cache/、results/ 完全隔离）
+  cache_dir: "cache_res"
+  results_dir: "results_res"
+
+# 点云渲染图边缘增强配置
+edge_enhancement:
+  enable: true                        # 是否启用边缘增强
+  edge_strength: 0.8                  # 边缘强度 (0.5-1.0)，越大边缘越深
+  edge_color_bgr: [25, 25, 25]        # 边缘颜色 BGR，默认深灰色
+  point_size_estimate: 3              # 点径估计值，用于形态学操作
+  close_kernel_size: 3                # 闭操作核大小，用于填补点云空洞
+  blur_kernel_size: 3                 # 高斯模糊核大小，用于去噪
+  unsharp_amount: 0.5                 # 反锐化掩膜强度，增强边缘锐利度
+  canny_low_thresh: 30                # Canny边缘检测低阈值
+  canny_high_thresh: 100              # Canny边缘检测高阈值
+  erode_kernel_size: 2                # 腐蚀操作核大小，用于细化边缘

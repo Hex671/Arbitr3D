@@ -1,0 +1,22 @@
+{
+    "arm": [
+        "back",
+        "seat"
+    ],
+    "back": [
+        "arm",
+        "seat"
+    ],
+    "leg": [
+        "seat",
+        "wheel"
+    ],
+    "seat": [
+        "arm",
+        "back",
+        "leg"
+    ],
+    "wheel": [
+        "leg"
+    ]
+}
